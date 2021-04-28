@@ -176,6 +176,15 @@ class matrix
 
     explicit operator float() const;
 
+    matrix<C,R> Transpose() const
+    {
+        matrix<C,R> dest;
+        for (int r = 0; r < Rows(); r++)
+            for (int c = 0; c < Cols(); c++)
+                dest(c,r) = data[r][c];
+        return dest;
+    }
+
   private:
     alignas(16) Array data;
 };
