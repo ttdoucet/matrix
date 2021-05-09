@@ -262,7 +262,7 @@ std::ostream& operator<<(std::ostream& s, const matrix<R,C>& m)
             s << " " << m(r, c);
         s << "\n";
     }
-    s << "}\n";
+    s << "}";
 
     s.flags(f);
     return s;
