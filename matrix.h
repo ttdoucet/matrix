@@ -5,6 +5,11 @@
 #include <iostream>
 #include <cstdlib>
 
+#define USE_ACCEL 1
+#if USE_ACCEL
+#include <Accelerate/Accelerate.h>
+#endif
+
 /* Written by Todd Doucet.
  *
  * Intended for relatively small matrices whose sizes are known
@@ -220,6 +225,50 @@ matrix<S1,S3> operator *(const matrix<S1, S2> &lhs, const matrix<S2, S3> &rhs)
     }
     return result;
 }
+
+#if USE_ACCEL
+template<int S1, int S2, int S3> inline
+matrix<S1,S3> multacc(const matrix<S1, S2> &lhs, const matrix<S2, S3> &rhs)
+{
+    vDSP_Stride stride = 1;
+
+    matrix<S1,S3> result;
+
+// They are chowderheads at Apple who do not understand
+// the proper use of const.  I have never had to cast away
+// const in my life until now.  Good grief.
+
+    auto llhs = const_cast<matrix<S1, S2> *>(&lhs);
+    float *A = llhs->begin();
+
+    auto rrhs = const_cast<matrix<S2, S3> *>(&rhs);
+    float *B = rrhs->begin();
+
+
+    vDSP_mmul(A, 1,
+              B, 1,
+              result.begin(), 1,
+              S1, S3, S2);
+
+    return result;
+}
+#endif
+
+template<int S1, int S2, int S3> inline
+matrix<S1,S3> mult2(const matrix<S1, S2> &lhs, const matrix<S2, S3> &rhs)
+{
+    matrix<S1,S3> result;
+
+    for (auto i = 0; i < S2; i++)
+        for (auto lr = 0; lr < S1; lr++)
+        {
+            auto f = lhs(lr, i);
+            for (auto c = 0; c < S3; c++)
+                result(lr, c) += f  * rhs(i, c);
+        }
+    return result;
+}
+
 
 /* Multiplication of a matrix by a scalar.
  */
