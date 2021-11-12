@@ -5,11 +5,6 @@
 #include <iostream>
 #include <cstdlib>
 
-#define USE_ACCEL 1
-#if USE_ACCEL
-#include <Accelerate/Accelerate.h>
-#endif
-
 /* Written by Todd Doucet.
  *
  * Intended for relatively small matrices whose sizes are known
@@ -209,66 +204,48 @@ template<> inline matrix<1, 1>::operator float() const
 
 /* Multiplication of two matrices.
  */
-template<int S1, int S2, int S3> inline
-matrix<S1,S3> operator *(const matrix<S1, S2> &lhs, const matrix<S2, S3> &rhs)
+template<int I, int J, int K> inline
+matrix<I, K> operator *(const matrix<I, J> &A, const matrix<J, K> &B)
 {
-    matrix<S1,S3> result;
-    for (int r = 0; r < S1; r++)
-    {
-        for (int c = 0; c < S3; c++)
+    if constexpr(K == 1)
+        return mult_direct(A, B);
+    else
+        return mult_by_rows(A, B);
+}
+
+/* Multiply using straightforward matrix-vector products.
+ */
+template<int I, int J, int K> inline
+matrix<I, K> mult_direct(const matrix<I, J> &A, const matrix<J, K> &B)
+{
+    matrix<I, K> C;
+
+    for (int i = 0; i < I; i++)
+        for (int k = 0; k < K; k++)
         {
-            float res = 0;
-            for (int k = 0; k < S2; k++)
-                res += ( lhs(r, k) * rhs(k, c) );
-            result(r, c) = res;
+            C(i, k) = 0;
+            for (int j = 0; j < J; j++)
+                C(i, k) += A(i, j) * B(j, k);
         }
-    }
-    return result;
+    return C;
 }
 
-#if USE_ACCEL
-template<int S1, int S2, int S3> inline
-matrix<S1,S3> multacc(const matrix<S1, S2> &lhs, const matrix<S2, S3> &rhs)
+/*  Muliply using linear combinations of rows of B.
+ */
+template<int I, int J, int K> inline
+matrix<I, K> mult_by_rows(const matrix<I, J> &A, const matrix<J, K> &B)
 {
-    vDSP_Stride stride = 1;
+    matrix<I, K> C;
 
-    matrix<S1,S3> result;
-
-// They are chowderheads at Apple who do not understand
-// the proper use of const.  I have never had to cast away
-// const in my life until now.  Good grief.
-
-    auto llhs = const_cast<matrix<S1, S2> *>(&lhs);
-    float *A = llhs->begin();
-
-    auto rrhs = const_cast<matrix<S2, S3> *>(&rhs);
-    float *B = rrhs->begin();
-
-
-    vDSP_mmul(A, 1,
-              B, 1,
-              result.begin(), 1,
-              S1, S3, S2);
-
-    return result;
-}
-#endif
-
-template<int S1, int S2, int S3> inline
-matrix<S1,S3> mult2(const matrix<S1, S2> &lhs, const matrix<S2, S3> &rhs)
-{
-    matrix<S1,S3> result;
-
-    for (auto i = 0; i < S2; i++)
-        for (auto lr = 0; lr < S1; lr++)
+    for (auto i = 0; i < I; i++)
+        for (auto j = 0; j < J; j++)
         {
-            auto f = lhs(lr, i);
-            for (auto c = 0; c < S3; c++)
-                result(lr, c) += f  * rhs(i, c);
+            const auto f = A(i, j);
+            for (auto k = 0; k < K; k++)
+                C(i, k) += f * B(j, k);
         }
-    return result;
+    return C;
 }
-
 
 /* Multiplication of a matrix by a scalar.
  */
