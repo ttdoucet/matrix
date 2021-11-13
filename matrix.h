@@ -16,8 +16,8 @@ class matrix
     typedef float Array[R][C];
 
   public:
-    constexpr int Rows() const { return R; }
-    constexpr int Cols() const { return C; }
+    static constexpr int Rows() { return R; }
+    static constexpr int Cols() { return C; }
 
     // initialize to zeros.
     matrix<R,C>()
@@ -172,7 +172,11 @@ class matrix
 
     float *Data() { return &data[0][0]; }
     float *begin() { return Data(); }
-    float *end()   { return &data[R-1][C-1] + 1; }
+    float *end() { return &data[R-1][C-1] + 1; }
+
+    const float *cbegin() const { return &data[0][0]; }
+    const float *cend() const { return &data[R-1][C-1] + 1; }
+
 
     explicit operator float() const;
 
